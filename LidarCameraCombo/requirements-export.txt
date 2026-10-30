@@ -1,0 +1,4 @@
+# Only needed for `python scripts/get_model.py --export` (laptop). Not needed on the Pi.
+torch>=2.1
+transformers>=4.45
+onnx>=1.15

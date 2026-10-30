@@ -1,0 +1,123 @@
+# =============================================================================
+#  lidepth configuration  —  every tunable parameter lives here.
+#  Override any value from the command line, e.g.:
+#     python -m lidepth live --set lidar.port=/dev/serial0 --set model.input_long_side=252
+#  Relative paths are resolved relative to THIS file's folder.
+# =============================================================================
+
+# --- General ----------------------------------------------------------------
+mock: false                 # true = no hardware: simulated lidar + synthetic camera images
+log_level: INFO             # DEBUG, INFO, WARNING, ERROR
+
+# --- Lidar (LDRobot LD19 / LD06, DTOF, 47-byte packets) ---------------------
+lidar:
+  model: LD19               # LD19 or LD06. Same wire protocol; sets model defaults (see README)
+  port: /dev/ttyUSB0        # USB adapter: /dev/ttyUSB0 or /dev/ttyACM0.  GPIO UART: /dev/serial0
+  baud: 230400              # official baud for both LD06 and LD19
+  min_range_m: 0.02         # points closer than this are dropped
+  max_range_m: 12.0         # points farther than this are dropped
+  min_intensity: 15         # 0..255; drop weak returns (raise if you see "ghost" points)
+  ld06_angle_correction: false  # legacy LD06 SDK near-range angle correction (leave false for LD19)
+  latency_s: 0.0            # extra fixed delay to subtract from packet arrival time (tune if needed)
+  scan_buffer_size: 30      # number of recent full 360° scans kept in memory (30 ≈ 3 s at 10 Hz)
+  no_data_timeout_s: 3.0    # error out if no valid packet arrives in this time
+  # Lidar mounting direction: angle (deg, clockwise, in the lidar's own 0..360 frame)
+  # is converted to a right-handed frame x=forward, y=left, z=up.  If the lidar is
+  # mounted upside-down set this to true (angles then run counter-clockwise).
+  upside_down: false
+
+# --- Camera (Raspberry Pi Camera Module 3 via Picamera2) --------------------
+camera:
+  width: 640
+  height: 480               # 640x480 is 4:3 → crops the 16:9 sensor (hFOV ≈ 53°, see README)
+  sensor_output_size: [2304, 1296]  # force the full-FOV binned sensor mode
+  lens_position: 1.0        # FIXED focus in dioptres (1/m). 1.0 = 1 m focus; 0.0 = infinity.
+                            # MUST be the same during intrinsic calibration and testing!
+  exposure_time_us: 0       # 0 = auto exposure; set e.g. 8000 to freeze motion blur
+  timestamp_offset_s: 0.0   # added to the frame timestamp (tune for sync, normally 0)
+  hfov_deg: 66.0            # only used for a rough default if camera.yaml does not exist
+  vfov_deg: 41.0
+  jpeg_quality: 95          # for recording
+  save_format: jpg          # jpg or png
+
+# --- Depth model (Depth Anything V2 Small, ONNX, CPU) -----------------------
+model:
+  path: models/depth_anything_v2_small.onnx   # run: python scripts/get_model.py
+  input_long_side: 182      # model input long side (multiple of 14). 182 → 182x140 (fastest default),
+                            # 252 → 252x196, 364, 518 = sharper but slower. See README "Speed".
+  threads: 4                # ONNX Runtime CPU threads (Pi 4 has 4 cores)
+  mock_model: false         # true = fake "model" that returns distorted true inverse depth (mock only)
+
+# --- Calibration files ------------------------------------------------------
+calibration:
+  camera_file: calib/camera.yaml        # written by calibrate-camera
+  extrinsics_file: calib/extrinsics.yaml  # written by calibrate-extrinsics
+  checkerboard_cols: 9      # INNER corners along the long side
+  checkerboard_rows: 6      # INNER corners along the short side
+  square_size_mm: 25.0      # measure your printout and put the real value here!
+  min_images: 15
+
+# Default extrinsics used if calib/extrinsics.yaml does not exist yet.
+extrinsics_default:
+  cam_up_m: 0.05            # camera optical centre is this far ABOVE the lidar scan plane (negative = below)
+  cam_forward_m: 0.0        # camera is this far in front of the lidar centre
+  cam_left_m: 0.0           # camera is this far to the left of the lidar centre
+  yaw_deg: 0.0              # lidar angle (clockwise, deg) that the camera looks along
+  pitch_deg: 0.0            # camera tilt, positive = looking up
+  roll_deg: 0.0             # camera roll, positive = image rotated clockwise
+
+# --- Projection / sampling --------------------------------------------------
+projection:
+  min_z_m: 0.05             # ignore points closer than this in front of the camera
+  sample_window: 5          # median window (pixels, odd) when reading the model at a lidar pixel
+  border_px: 3              # ignore projections within this many pixels of the border
+
+# --- Time synchronisation ---------------------------------------------------
+sync:
+  tolerance_s: 0.05         # use lidar points within ±50 ms of the frame time (per-point timestamps)
+  angle_bin_deg: 0.5        # if an angle was seen twice inside the window, keep the closer-in-time one
+
+# --- Fusion: 1/Z = a*d + b ---------------------------------------------------
+fusion:
+  min_points: 15            # need at least this many lidar–pixel pairs
+  min_inliers: 10           # and at least this many RANSAC inliers
+  ransac_iters: 200
+  inlier_rel_err: 0.10      # inlier if |Z_pred - Z_lidar| / Z_lidar < 10 %
+  min_d_spread: 0.05        # relative spread of model values needed (avoid fits on a flat wall)
+  ema_alpha: 0.5            # 0..1, weight of the NEW fit (1 = no smoothing)
+  max_range_margin: 1.5     # pixels farther than lidar.max_range_m * margin → unknown
+  min_depth_m: 0.05         # pixels closer than this → unknown
+  max_fallback_frames: 30   # reuse last good fit for at most this many failed frames
+  conf_sigma_px: 60         # confidence = exp(-0.5 (dv/sigma)^2), dv = rows from lidar line
+  seed: 0                   # RANSAC random seed (reproducible processing)
+
+# --- Live display -------------------------------------------------------------
+display:
+  depth_max_m: 6.0          # colour scale for the depth map: 0 .. this many metres
+  point_radius: 3
+  window_scale: 1.0
+
+# --- Recording ----------------------------------------------------------------
+record:
+  sessions_dir: sessions
+  fps: 5                    # frames per second to save (lidar is always saved in full)
+  duration_s: 0             # 0 = until you press Ctrl+C
+
+# --- Evaluation ---------------------------------------------------------------
+evaluate:
+  gt_type: range            # range = tape from camera lens straight to the object; z = forward depth only
+  near_line_px: 40          # "near the lidar line" = within this many rows of it
+
+# --- FUTURE: drone obstacle output (OFF for the ground test) -----------------
+obstacle_output:
+  enabled: false
+  sectors: 72               # 72 × 5° = 360°
+  band_up_m: 0.3            # use pixels whose 3-D point is within this height ABOVE the camera…
+  band_down_m: 0.3          # …and this far BELOW it
+  percentile: 0             # 0 = closest valid depth; 2..5 = more robust to noise
+  min_confidence: 0.0       # ignore pixels below this confidence
+  min_distance_cm: 20
+  max_distance_cm: 1200
+  mavlink_port: /dev/serial0
+  mavlink_baud: 921600
+  send_rate_hz: 10

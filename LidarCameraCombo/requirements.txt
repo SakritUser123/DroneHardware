@@ -1,0 +1,11 @@
+# Laptop (macOS Apple Silicon / Linux / Windows) — offline processing, mock mode, tests.
+#   python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt
+numpy>=1.24
+opencv-python>=4.8
+onnxruntime>=1.17
+PyYAML>=6.0
+pyserial>=3.5
+matplotlib>=3.6
+pytest>=7.0
+# optional: only for the (disabled) drone obstacle output
+pymavlink>=2.4.40

@@ -1,0 +1,10 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+LidarCameraCombo/models/*
+!LidarCameraCombo/models/.gitkeep
+LidarCameraCombo/sessions/
+LidarCameraCombo/calib/camera_images/

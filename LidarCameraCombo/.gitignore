@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+models/*.onnx
+models/*.part
+sessions/*
+!sessions/.gitkeep
+calib/camera_images/
+.pytest_cache/

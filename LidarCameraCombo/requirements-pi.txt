@@ -1,0 +1,11 @@
+# Raspberry Pi (Bookworm 64-bit). Install the system packages FIRST (see README step 2):
+#   sudo apt install -y python3-picamera2 python3-opencv python3-numpy python3-yaml \
+#                       python3-serial python3-matplotlib python3-pytest
+# then, inside a venv created WITH --system-site-packages:
+#   pip install -r requirements-pi.txt
+#
+# Keep numpy < 2: Picamera2/simplejpeg from apt are built against the system numpy 1.x.
+numpy<2
+onnxruntime>=1.17
+# optional: only for the (disabled) drone obstacle output
+pymavlink>=2.4.40
