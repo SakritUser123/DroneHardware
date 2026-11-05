@@ -75,7 +75,8 @@ try:
 
         cv2.imshow("Raspberry Pi camera",frame)
         cv2.imshow("Depth analysis",depth_display)
-
+        latest_frame = frame
+        latest_depth = depth
 
         # press r to exit
         if cv2.waitKey(1) & 0xFF == ord("r"):
