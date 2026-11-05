@@ -51,38 +51,19 @@ camera.start()
 print("camera started")
 # a pixel which is pure red in RGB would be [255,0,0]
 # but that same pixel in BGR would be [0,0,255]
+latest_frame = None
+latest_depth = None
+def run_camera(stop_event):
+    global latest_frame, latest_depth
 
-try:
-    while True:
-        frame = camera.capture_array()
-        frame = cv2.cvtColor(
-            frame,
-            cv2.RGB2BGR
-        )
+    camera.start()
+    try:
+        while not stop_event.is_set():
+            frame = camera.capture_array()
+            frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+            depth = model.infer_image(frame)
+            latest_frame = frame.copy()
+            latest_depth = depth.copy()
 
-        depth = model.infer_image(frame)
-        depth_display = cv2.normalize(
-            depth,
-            None,
-            0,
-            255,
-            cv2.NORM_MINMAX
-        )
-
-        depth_display = depth_display.astype(
-            np.uint8
-        )
-
-        cv2.imshow("Raspberry Pi camera",frame)
-        cv2.imshow("Depth analysis",depth_display)
-        latest_frame = frame
-        latest_depth = depth
-
-        # press r to exit
-        if cv2.waitKey(1) & 0xFF == ord("r"):
-            break
-
-finally:
-    camera.stop()
-    cv2.destroyAllWindows()
-    print("camera stopped")
+    finally:
+        camera.stop()
