@@ -5,7 +5,8 @@ import numpy as np
 from picamera2 import Picamera2
 
 from depth_anything_v2.dpt import DepthAnythingV2
-
+torch.set_num_threads(4)
+torch.set_num_interop_threads(1)
 DEVICE = "cpu"
 
 model = DepthAnythingV2(
