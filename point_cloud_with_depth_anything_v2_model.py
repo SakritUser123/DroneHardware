@@ -86,7 +86,7 @@ Z = 1 - Z
 # u contains x pixel positions all
 # v contains the y pixel postiions all.
 
-u , v = np.meshgrid(np.arrange(w), np.arrange(h))
+u , v = np.meshgrid(np.arrange(w), np.arange(h))
 
 X = (u - cx) * Z / fx # calculates 3d horizontol position for each pixel.
 Y = (v - cy) * Z / fy # calculates 3d vertical position for each pixel.
