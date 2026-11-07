@@ -75,7 +75,7 @@ for angle, distance in zip(angles,distances): # if distance is not postive or is
   # forward is forward distance  to object in mm
   # so far we assume that the scan area of the LIDAR and the Camera are both parallel to the ground and that the scan plane of the LIDAR intersects a part of the viewing region of the Camera.
   if 0 <= x < WIDTH  and 0 <= y < HEIGHT: # checks that the point is inside the image
-    cv2.circle(frame, (x,y) , 4 (0,0,255),-1) # draws a read dot in the image where the Lidar detects the object
+    cv2.circle(frame, (x,y) , 4, (0,0,255),-1) # draws a read dot in the image where the Lidar detects the object
     cv2.putText(
     frame,
     f"{int(distance)} mm",
