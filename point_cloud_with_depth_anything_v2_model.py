@@ -73,7 +73,7 @@ h , w = depth.shape
 fx = w / (2 * np.tan(np.radians(66/2)))
 
 # square coordinates so vertical focal length equals horizontal focal length.
-fy = fx
+fy = h / (2 * np.tan(np.radians(41 / 2)))
 
 cx = w/ 2
 
