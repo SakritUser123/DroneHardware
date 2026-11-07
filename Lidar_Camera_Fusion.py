@@ -59,7 +59,7 @@ for angle, distance in zip(angles,distances): # if distance is not postive or is
     continue
   angle_rad = np.radians(angle) # converts into radians because cosine numpy cos fucntion requires radians.
   forward_component_vector = distance * np.cos(angle_rad) # caluculates forward component formula is forward_comp = distance * cosine of angle
-  if forward <=0: # if forward component is negative then it will not be used.
+  if forward_component_vector <=0: # if forward component is negative then it will not be used.
     continue
   x = int(cx + fx * np.tan(angle_rad)) 
   # cx is cameras horizontal center
