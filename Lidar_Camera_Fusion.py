@@ -55,7 +55,7 @@ if len(distances) > 0:
   plotter.run_threaded(angles,distances)
 
 for angle, distance in zip(angles,distances): # if distance is not postive or is above 10,000 mm (too far away ) then it will not be used. 
-  if distance <= 0 or distance >= 10000 
+  if distance <= 0 or distance >= 10000:
     continue
   angle_rad = np.radians(angle) # converts into radians because cosine numpy cos fucntion requires radians.
   forward_component_vector = distance * np.cos(angle_rad) # caluculates forward component formula is forward_comp = distance * cosine of angle
