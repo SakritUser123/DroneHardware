@@ -1,10 +1,9 @@
-# THIS IS A LIDAR WRAPPER IMPORTED FROM THE REPO LidarLD19 
-
 import serial
 import numpy as np
+
 import matplotlib.pyplot as plt
-import matplotlib 
-matplotlib.use("Agg")
+import matplotlib
+matplotlib.use("TkAgg")
 
 import time
 
@@ -13,7 +12,7 @@ class SerialRead:
     '''
     Serial Communication Class for reading data from a UART port.
     '''
-    
+   
     def __init__(self, port_name='/dev/cu.usbserial-0001', baud_rate=230400):
         self.port_name = port_name
         self.baud_rate = baud_rate
@@ -28,7 +27,7 @@ class SerialRead:
             self.ser = serial.Serial(self.port_name, self.baud_rate, timeout=1)
         except Exception as e:
             print(f"Error opening serial port: {e}")
-    
+   
     def run_threaded(self):
         '''
         Read all available data from the serial port and return it as a byte array.
@@ -61,7 +60,7 @@ class LD19LidarParse:
     def run_threaded(self, byte_data, reset=0):
         if reset > 0:
             self.buffer = bytearray()  # Reset buffer if necessary
-        
+       
         # Add incoming byte data to buffer
         self.buffer += byte_data
 
@@ -93,11 +92,11 @@ class LD19LidarParse:
 
             # Calculate angle increment per point
             point_count = 12  # 12 data points in the packet
-            
+           
             # Calculate angle increment per point with wrap-around handling
             angle_diff = (end_angle - start_angle) % 360.0
             angle_increment = angle_diff / (point_count - 1)
-    
+   
             # Extract distance and intensity data
             for i in range(point_count):
                 index = 6 + i * 3
@@ -117,7 +116,7 @@ class NormalizeScan:
     Normalize Lidar Scan Data
     Converts angle, distance, and intensity arrays into distance and intensity data per step angle (0-359 degrees).
     '''
-    
+   
     def __init__(self, step_angle=1, max_distance=20000, min_intensity=5, min_angle=0, max_angle=359):
         self.step_angle = step_angle  # Step size in degrees
         self.max_distance = max_distance  # Maximum distance in mm
@@ -183,6 +182,8 @@ class LD19Lidar:
     '''
     def __init__(self, step_angle=1, min_angle=0, max_angle=359, port_name='/dev/ttyUSB0'):
         self.serial_reader = SerialRead(port_name=port_name)  # Class to read from serial port
+        self.SAFETY_DISTANCE = 100
+        self.FORWARD_ANGLE = 0
         self.lidar_parser = LD19LidarParse()   # Class to parse LD19 Lidar data
         self.normalizer = NormalizeScan(step_angle=step_angle, min_angle=min_angle, max_angle=max_angle)  # Class to normalize Lidar data
 
@@ -197,10 +198,56 @@ class LD19Lidar:
         if distances and angles and intensities:
             # Step 3: Normalize the data (distances and intensities based on angles)
             normalized_angles, normalized_distances, normalized_intensities = self.normalizer.run_threaded(angles, distances, intensities, reset)
-            
+           
             return np.array(normalized_angles), np.array(normalized_distances)
         return np.array([]), np.array([])
+   
+    # in each sector returns obstacle that is closest to stay safe.
+    def get_sector_min(self,angles,distances,sector_min,sector_max):
+        sector_distances = []
+        for angle,distance in zip(angles,distances):
+            relative_angle = ((angle-self.FORWARD_ANGLE + 180) % 360 ) -180
+            if sector_min <= relative_angle <= sector_max:
+                if 0 < distance <12000:
+                    sector_distances.append(distance)
+        if sector_distances:
+            return min(sector_distances)
+        return None
+    # right is distance in right sector and left is distance in left sector and center is distance is center sector.
+    def get_avoidance_decision(self,left,center,right,back):
+       
+       
+        readings = {
+        "CENTER": center,
+        "LEFT": left,
+        "RIGHT": right,
+        "BACK": back
+        }
 
+        valid = {direction: distance for direction, distance in readings.items()
+             if distance is not None}
+
+        if not valid:
+            return "UNKNOWN"
+
+        return max(valid, key=valid.get)
+   
+    def get_sector_readings(self,angles, distances):
+        left = self.get_sector_min(angles,distances,-135,-45)
+        center = self.get_sector_min(angles,distances,- 45, 45)
+        right = self.get_sector_min(angles,distances, 45 , 135)
+        back = self.get_sector_min(angles,distances, 135 , 180)
+        # rest of back to work with wraparound logic.
+        back_left = self.get_sector_min(angles,distances, -180 , -135)
+        back_distances = [d for d in (back_left,back) if d is not None]
+        back = min(back_distances) if back_distances else None
+       
+       
+           
+        decision = self.get_avoidance_decision(left,center,right,back)
+       
+        return left, center, right,back, decision
+       
     def update(self):
         pass
 
@@ -218,10 +265,12 @@ class LidarPlot:
     '''
     Class for real-time plotting of Lidar data.
     '''
-    
+   
     def __init__(self, max_plot_distance=10000, point_size=1, start_angle=270):
         # Setup the polar plot for real-time visualization
         self.fig, self.ax = plt.subplots(subplot_kw={'projection': 'polar'})
+        plt.show(block=False)
+        plt.pause(0.1)
         self.scatter = None
         self.max_plot_distance = max_plot_distance  # Limit the plot radius to 10000 mm
         self.point_size = point_size  # Set the size of the plot points
@@ -253,13 +302,16 @@ class LidarPlot:
             self.scatter = self.ax.scatter(valid_angles, valid_distances, s=self.point_size, c='b', alpha=0.75)
         else:
             # Update the plot with new data
+            print("FIRST 5: " , valid_angles[:5])
+            print("FIRST 5 dis: " , valid_distances[:5])
+            print("scatter updating" )
             self.scatter.set_offsets(np.c_[valid_angles, valid_distances])
-
+        print("figure visible: ", plt.fignum_exists(self.fig.number))
+        print("Sactter points: " , len(self.scatter.get_offsets()))
         # Refresh the plot
+        plt.draw()
         plt.pause(0.01)
 
     def shutdown(self):
         '''Close the plot window when done.'''
         plt.close(self.fig)
-
-
