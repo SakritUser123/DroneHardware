@@ -43,9 +43,9 @@ while True:
   frame = camera_module.latest_frame
   depth = camera_module.latest_depth
 
-if frame is None or depth is None:
-  time.sleep(0.01)
-  continue
+  if frame is None or depth is None:
+    time.sleep(0.01)
+    continue
 
 frame = frame.copy()
 
