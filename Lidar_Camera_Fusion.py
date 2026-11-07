@@ -93,12 +93,12 @@ try:
     if cv2.waitKey(1) & 0xFF == ord("q"):
       break
 
-  finally:
-    stop_event.set()
-    camera_thread.join(timeout=2)
-    lidar.shutdown()
-    plotter.shutdown()
-    cv2.destroyAllWindows()
+finally:
+  stop_event.set()
+  camera_thread.join(timeout=2)
+  lidar.shutdown()
+  plotter.shutdown()
+  cv2.destroyAllWindows()
 
   
     
