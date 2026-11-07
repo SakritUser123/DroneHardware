@@ -94,4 +94,17 @@ Y = (v - cy) * Z / fy # calculates 3d vertical position for each pixel.
 #creates all points by combing respectie x and y and z points it also reverses the y coordinates in order to match the chosen convention.
 points = np.stack((X, -Y, Z), axis=-1).reshape(-1, 3) # creates each point in to a array [x,y,z]
 
+colors = cv2.cvtColor(raw_img, cv2.COLOR_BGR2RGB) # gets original color
+colors = colors.reshape(-1, 3) / 255.0 # creates them into colors from 0 to 255.
+
+pcd = o3d.geometry.PointCloud() # creates empty point cloud.
+
+pcd.points = o3d.utility.Vector3dVector(points) # adds all points to point cloud
+
+pcd.colors = o3d.utility.Vector3dVector(colors) # adds all the respective colors to the cloud.
+
+o3d.visualization.draw_geometries([pcd])  # displays the point cloud.
+
+
+
 
